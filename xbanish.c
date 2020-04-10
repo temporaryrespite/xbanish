@@ -38,6 +38,8 @@
 #include <X11/extensions/Xfixes.h>
 #include <X11/extensions/XInput.h>
 #include <X11/extensions/XInput2.h>
+#include <X11/Xlibint.h> // for LockDisplay UnlockDisplay SyncHandle
+
 
 void hide_cursor(void);
 void show_cursor(void);
@@ -142,7 +144,8 @@ main(int argc, char *argv[])
 
 	for (;;) {
 		cookie = &e.xcookie;
-		XNextEvent(dpy, &e);
+		//XNextEvent(dpy, &e);
+		XPeekEvent(dpy, &e);
 
 		int etype = e.type;
 		if (e.type == motion_type)
@@ -155,7 +158,8 @@ main(int argc, char *argv[])
 			etype = ButtonRelease;
 		else if (e.type == device_change_type) {
 			snoop_root();
-			continue;
+			//continue;
+      goto end;
 		}
 
 		switch (etype) {
@@ -233,6 +237,8 @@ main(int argc, char *argv[])
 		default:
 			DPRINTF(("unknown event type %d\n", e.type));
 		}
+end:
+    XNextEvent(dpy, &e);
 	}
 }
 
@@ -297,12 +303,36 @@ show_cursor(void)
 	if (!hiding)
 		return;
 
+//  XSync(dpy, TRUE);
+//  LockDisplay(dpy);
+//  XSync(dpy, TRUE);
+  //XGrabButton(dpy, AnyButton, AnyModifier, DefaultRootWindow(dpy), True, ButtonPressMask, GrabModeAsync, GrabModeAsync, None, None);
+//	XEvent e;
+//  int got;
+//  for (;;) {
+//    got=XCheckMaskEvent(dpy, 
+//        // long  event_mask
+//        // see /usr/include/X11/X.h
+//        16777215 //all?  FIXME: this should've been 0 ! but since XSync(dpy, TRUE); above didn't work, I'm betting this with 0 won't work either! because there isn't a global queue of events, instead it must be per app or something.
+//        ,&e);
+//    if (!got) {
+//      break;
+//    }
+//    XNextEvent(dpy, &e);//FIXME: save all not just current(ok now last!) event!
+//  }//for
+
 	if (move && move_x != -1 && move_y != -1)
 		XWarpPointer(dpy, None, DefaultRootWindow(dpy), 0, 0, 0, 0,
 		    move_x, move_y);
 
 	XFixesShowCursor(dpy, DefaultRootWindow(dpy));
 	hiding = 0;
+  //for (e in  FIXME
+  //XPutBackEvent(dpy, &e);
+
+//  UnlockDisplay(dpy);
+//  SyncHandle();
+  //XFlush(dpy); //no effect
 }
 
 void
