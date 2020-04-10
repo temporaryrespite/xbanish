@@ -194,6 +194,10 @@ main(int argc, char *argv[])
 			hide_cursor();
 			break;
 
+		case ButtonPress:
+      DPRINTF(("BOOM!!!!! %d\n", hiding));
+      //XPutBackEvent(dpy, &e);
+      break;
 		case ButtonRelease:
 		case MotionNotify:
 			if (!always_hide)
@@ -290,6 +294,12 @@ hide_cursor(void)
 		}
 
 		XFixesHideCursor(dpy, DefaultRootWindow(dpy));
+    XGrabButton(dpy, AnyButton, AnyModifier, DefaultRootWindow(dpy), True,
+        ButtonPressMask
+        //0 // using 0 is the same as using ButtonPressMask, for wtw reason.
+        , GrabModeAsync, GrabModeAsync, None, None); // idea from https://github.com/amosbird/xbanish/commit/b70a13a73778d53dca7b4391ded6655e52ccd1f4
+    XGrabPointer(dpy, DefaultRootWindow(dpy), True, 0, GrabModeAsync, GrabModeAsync, None, None, CurrentTime);//without this, it leaks ButtonPress event (the BOOM printf) but not always, for example if RMB menu is open already when you press RMB to exit hidden state, then the press isn't felt (by root window?) thus, no BOOM!
+    //TODO: check return value for grab/ungrab
 		hiding = 1;
 	}
 }
@@ -326,6 +336,10 @@ show_cursor(void)
 		    move_x, move_y);
 
 	XFixesShowCursor(dpy, DefaultRootWindow(dpy));
+  XUngrabPointer(dpy, CurrentTime);
+  XUngrabButton(dpy, AnyButton, AnyModifier, DefaultRootWindow(dpy));
+  //XAllowEvents(dpy, AsyncBoth, CurrentTime); //same as ungrab, or not!
+  //XAllowEvents(dpy, SyncBoth, CurrentTime);
 	hiding = 0;
   //for (e in  FIXME
   //XPutBackEvent(dpy, &e);
